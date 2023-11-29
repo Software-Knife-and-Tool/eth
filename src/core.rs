@@ -28,7 +28,7 @@ impl Core {
         if !init_path.exists() {
             panic!("config: init.l not found, not installed correctly");
         }
-        
+
         let init_loaded = system
             .load(&init_path.to_str().unwrap().to_string())
             .is_ok();
@@ -61,7 +61,6 @@ impl Core {
     }
 
     fn eval_rstring(system: &System, expr: String) -> Tag {
-        println!("eval_rstring: {}", expr);
         system
             .mu()
             .eval(
