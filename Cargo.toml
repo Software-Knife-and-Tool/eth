@@ -1,0 +1,49 @@
+[package]
+name = "eth"
+version = "0.0.1"
+authors = ["James M. Putnam <putnamjm.design@gmnail.com"]
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "eth"
+path = "src/main.rs"
+
+[dependencies]
+bytesize = { version = "1.1.0" }
+chrono = { version = "0.4.24" }
+envmnt = { version = "0.10.4" }
+iced = { version = "0.10.0", workspace = true, features = ["image", "system"] }
+iced_aw = { version = "0.5.0" }
+iced_futures = { version = "0.6" }
+iced_native = { version = "0.10.3" }
+iced_wgpu = { version = "0.10.0" }
+mu = { git = "https://github.com/Software-Knife-and-Tool/thorn.git", branch = "main" }
+num-traits = { version = "0.2.15", optional = true }
+once_cell = { version = "1.17.1" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_with = "3.4.0"
+
+sysinfo = { version = "0.28.4" }
+time = { version = "0.3.5", features = ["local-offset"], optional = true }
+whoami = { version = "1.4.0" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+chrono = { version = "0.4.23", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies.iced_graphics]
+version = "0.8.0"
+
+[dependencies.iced_style]
+version = "0.8.0"
+
+[workspace.dependencies.iced]
+version = "0.9.0"
+
+[package.metadata.deb]
+assets = [
+    ["target/release-opt/eth", "usr/bin/eth", "755"],
+    ["eth.desktop", "usr/share/applications/", "644"],
+]
