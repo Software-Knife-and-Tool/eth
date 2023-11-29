@@ -1,9 +1,9 @@
 //  SPDX-FileCopyrightText: Copyright 2023 James M. Putnam (putnamjm.design@gmail.com)
 //  SPDX-License-Identifier: MIT
 #![allow(dead_code)]
-mod eth;
 mod config;
 mod core;
+mod eth;
 
 use {
     crate::{config::Config, core::Core},
@@ -29,7 +29,10 @@ impl Environment {
         let config_path = self.config_path.as_path();
 
         if !config_path.exists() {
-            panic!("config directory {:?} does not exist, not correctly installed", config_path)
+            panic!(
+                "config directory {:?} does not exist, not correctly installed",
+                config_path
+            )
         }
 
         let config = config::Config::from_env(&self);
