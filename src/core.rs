@@ -2,6 +2,7 @@
 //  SPDX-License-Identifier: MIT
 #![allow(clippy::collapsible_match)]
 #![allow(unused_imports)]
+
 use {
     crate::{Config, Environment},
     mu::{Condition, Exception, Mu, Result, System, Tag},

@@ -69,7 +69,7 @@ pub fn main() -> iced::Result {
         flags: env,
         window: window::Settings {
             size: (1000, 500),
-            resizable: false,
+            resizable: true,
             decorations: true,
             ..Default::default()
         },
