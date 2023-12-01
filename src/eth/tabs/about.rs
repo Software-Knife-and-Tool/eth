@@ -7,33 +7,65 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 use {
-    super::{
-        super::super::{Core, Environment},
-        super::ui::{Message, Tab},
-        syscons::SysCons,
+    super::super::{
+        super::{Core, Environment},
+        ui::{Message, Tab},
     },
-    iced::widget::scrollable,
     iced::{
         alignment::{Horizontal, Vertical},
-        widget::{column, container, horizontal_rule, text, Column, Container, Row, Space, Text},
+        widget::{
+            column, container, horizontal_rule, scrollable, text, Column, Container, Row, Space,
+            Text,
+        },
         Alignment, Element, Length, Renderer,
     },
     iced_aw::tab_bar::TabLabel,
     mu::{Condition, Exception, Mu, Result, System as MuSystem, Tag},
+    std::sync::RwLock,
     sysinfo::{System, SystemExt},
 };
 
+pub struct SysCons {
+    text: RwLock<Vec<String>>,
+}
+
+impl SysCons {
+    pub fn new() -> Self {
+        SysCons {
+            text: RwLock::new(Vec::<String>::new()),
+        }
+    }
+
+    pub fn log(&self, message: String) {
+        let mut text = self.text.write().unwrap();
+        let now = chrono::Utc::now();
+        let now_str = now.format("%m%d%H%M%S");
+
+        text.push(format!("{}: {}", now_str, message));
+    }
+
+    pub fn contents(&self) -> Option<String> {
+        let text = self.text.read().unwrap();
+
+        if text.len() == 0 {
+            None
+        } else {
+            Some(text.join("\n"))
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
-pub enum InfoMessage {
+pub enum AboutMessage {
     Refresh,
 }
 
-pub struct InfoTab {
+pub struct AboutTab {
     info: System,
     console: SysCons,
 }
 
-impl InfoTab {
+impl AboutTab {
     pub fn new() -> Self {
         let mut info = System::new_all();
         let console = SysCons::new();
@@ -47,9 +79,9 @@ impl InfoTab {
         self.console.log(message);
     }
 
-    pub fn update(&mut self, message: InfoMessage) {
+    pub fn update(&mut self, message: AboutMessage) {
         match message {
-            InfoMessage::Refresh => {
+            AboutMessage::Refresh => {
                 let mut info = System::new_all();
 
                 info.refresh_all();
@@ -59,7 +91,7 @@ impl InfoTab {
         }
     }
 
-    fn system_info(&self, width: i32, height: i32) -> Element<InfoMessage> {
+    fn system_info(&self, width: i32, height: i32) -> Element<AboutMessage> {
         let content: Element<_> = column![
             text("system".to_string()).size(20),
             horizontal_rule(1),
@@ -84,7 +116,7 @@ impl InfoTab {
             .into()
     }
 
-    fn mu_info(&self, env: &Environment, width: i32, height: i32) -> Element<InfoMessage> {
+    fn mu_info(&self, env: &Environment, width: i32, height: i32) -> Element<AboutMessage> {
         let content: Element<_> = column![
             text("mu".to_string()).size(20),
             horizontal_rule(1),
@@ -112,7 +144,7 @@ impl InfoTab {
     }
 
     pub fn view(&self, env: &Environment) -> Element<'_, Message, Renderer> {
-        let content: Element<'_, InfoMessage> = Container::new(
+        let content: Element<'_, AboutMessage> = Container::new(
             Column::new()
                 .align_items(Alignment::Start)
                 .max_width(800)
@@ -131,10 +163,10 @@ impl InfoTab {
         .align_y(Vertical::Top)
         .into();
 
-        content.map(Message::Info)
+        content.map(Message::About)
     }
 
-    fn console(&self, width: i32, height: i32) -> Element<InfoMessage> {
+    fn console(&self, width: i32, height: i32) -> Element<AboutMessage> {
         let content = column![
             text("console log"),
             horizontal_rule(1),
@@ -153,7 +185,7 @@ impl InfoTab {
     }
 }
 
-impl Tab for InfoTab {
+impl Tab for AboutTab {
     type Message = Message;
 
     fn title(&self) -> String {
@@ -162,7 +194,7 @@ impl Tab for InfoTab {
     }
 
     fn tab_label(&self) -> TabLabel {
-        TabLabel::Text("info".to_string())
+        TabLabel::Text("about".to_string())
     }
 
     fn content(&self) -> Element<'_, Self::Message> {

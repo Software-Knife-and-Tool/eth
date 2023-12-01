@@ -10,10 +10,10 @@
 use {
     super::super::{Core, Environment},
     crate::eth::tabs::{
-        info::{InfoMessage, InfoTab},
+        about::{AboutMessage, AboutTab},
         listener::{ListenerMessage, ListenerTab},
-        namespaces::{NamespacesMessage, NamespacesTab},
         scratchpad::{ScratchpadMessage, ScratchpadTab},
+        symbols::{SymbolsMessage, SymbolsTab},
     },
     iced::{
         alignment::{Horizontal, Vertical},
@@ -73,9 +73,9 @@ impl StatusBar {
 pub struct Ui {
     active_tab: usize,
     env: Environment,
-    info_tab: InfoTab,
+    about_tab: AboutTab,
     listener_tab: ListenerTab,
-    namespaces_tab: NamespacesTab,
+    symbols_tab: SymbolsTab,
     poll_interval_secs: u64,
     version: String,
     scratchpad_tab: ScratchpadTab,
@@ -85,9 +85,9 @@ pub struct Ui {
 pub enum Message {
     Scratchpad(ScratchpadMessage),
     EventOccurred(Event),
-    Info(InfoMessage),
+    About(AboutMessage),
     Listener(ListenerMessage),
-    Namespaces(NamespacesMessage),
+    Symbols(SymbolsMessage),
     TabSelected(usize),
 }
 
@@ -102,9 +102,9 @@ impl Application for Ui {
             version: "0.0.3".to_string(),
             active_tab: 0,
             scratchpad_tab: ScratchpadTab::new(),
-            info_tab: InfoTab::new(),
+            about_tab: AboutTab::new(),
             listener_tab: ListenerTab::new(),
-            namespaces_tab: NamespacesTab::new(),
+            symbols_tab: SymbolsTab::new(),
             poll_interval_secs: 10,
             env,
         };
@@ -114,24 +114,24 @@ impl Application for Ui {
             Some(how) => {
                 if *how {
                     tab_bar
-                        .info_tab
+                        .about_tab
                         .log("eth: config directory missing, using default config".to_string())
                 } else {
                     tab_bar
-                        .info_tab
+                        .about_tab
                         .log("eth: using supplied config".to_string())
                 }
             }
             None => tab_bar
-                .info_tab
+                .about_tab
                 .log("eth: config file missing or damaged, using default".to_string()),
         }
 
         tab_bar
-            .info_tab
+            .about_tab
             .log(format!("mu: local runtime v{}", Mu::VERSION));
 
-        let itab = &tab_bar.info_tab;
+        let itab = &tab_bar.about_tab;
 
         if tab_bar.env.core.as_ref().unwrap().init_loaded {
             itab.log("core: init environment active".to_string());
@@ -160,8 +160,8 @@ impl Application for Ui {
             }
             Message::Listener(message) => self.listener_tab.update(&self.env, message),
             Message::Scratchpad(message) => self.scratchpad_tab.update(message),
-            Message::Info(message) => self.info_tab.update(message),
-            Message::Namespaces(message) => self.namespaces_tab.update(message),
+            Message::About(message) => self.about_tab.update(message),
+            Message::Symbols(message) => self.symbols_tab.update(message),
         }
 
         Command::none()
@@ -169,7 +169,7 @@ impl Application for Ui {
 
     fn view(&self) -> Element<'_, Self::Message> {
         Tabs::new(self.active_tab, Message::TabSelected)
-            .push(self.info_tab.tab_label(), self.info_tab.view(&self.env))
+            .push(self.about_tab.tab_label(), self.about_tab.view(&self.env))
             .push(
                 self.scratchpad_tab.tab_label(),
                 self.scratchpad_tab.view(&self.env),
@@ -179,8 +179,8 @@ impl Application for Ui {
                 self.listener_tab.view(&self.env),
             )
             .push(
-                self.namespaces_tab.tab_label(),
-                self.namespaces_tab.view(&self.env),
+                self.symbols_tab.tab_label(),
+                self.symbols_tab.view(&self.env),
             )
             .into()
     }
