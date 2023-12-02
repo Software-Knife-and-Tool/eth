@@ -27,68 +27,164 @@ use {
 
 #[derive(Debug, Clone)]
 pub enum SymbolsMessage {
-    Selected(String),
+    SelectSymbol(String),
+    SelectNamespace(String),
     Refresh,
 }
 
 pub struct SymbolsTab {
-    namespaces: Vec<String>,
-    symbols: Vec<String>,
+    namespaces: Option<Vec<String>>,
+    selected_ns: Option<String>,
+    symbols: Option<Vec<String>>,
+    selected_symbol: Option<String>,
+    describe: Option<String>,
 }
 
 impl SymbolsTab {
     pub fn new() -> Self {
-        let namespaces = vec!["nil".to_string(), "mu".to_string(), "core".to_string()];
-
         Self {
-            namespaces,
-            symbols: vec![],
+            namespaces: None,
+            selected_ns: None,
+            symbols: None,
+            selected_symbol: None,
+            describe: None,
         }
     }
 
-    pub fn update(&mut self, message: SymbolsMessage) {
+    fn fetch_ns_list(env: &Environment) -> Vec<String> {
+        fn rem_first_and_last(value: &str) -> &str {
+            let mut chars = value.chars();
+            chars.next();
+            chars.next_back();
+            chars.as_str()
+        }
+
+        let ns_list = Core::eval_rstring(
+            &env.core.as_ref().unwrap().system,
+            "(mu:ns-map)".to_string(),
+        );
+        let ns_str = env.core.as_ref().unwrap().system.write(ns_list, false);
+        let trim = rem_first_and_last(&ns_str).to_string();
+        let slice = &trim.split(' ').collect::<Vec<&str>>();
+
+        let mut ns = vec![];
+
+        for ns_ in slice {
+            ns.push(ns_.to_string())
+        }
+
+        ns
+    }
+
+    fn fetch_symbols_list(env: &Environment, ns: String) -> Vec<String> {
+        fn rem_first_and_last(value: &str) -> &str {
+            let mut chars = value.chars();
+            chars.next();
+            chars.next_back();
+            chars.as_str()
+        }
+
+        let syms_cmd = format!("(mu:ns-syms :list {})", ns).to_string();
+        let sym_list = Core::eval_rstring(&env.core.as_ref().unwrap().system, syms_cmd);
+        let sym_str = env.core.as_ref().unwrap().system.write(sym_list, false);
+        let trim = rem_first_and_last(&sym_str).to_string();
+        let slice = &trim.split(' ').collect::<Vec<&str>>();
+
+        let mut syms = vec![];
+
+        for sym in slice {
+            syms.push(sym.to_string())
+        }
+
+        syms
+    }
+
+    fn describe_symbol(_env: &Environment, ns: &str, symbol: &String) -> String {
+        fn rem_first(value: &str) -> &str {
+            let mut chars = value.chars();
+            chars.next();
+            chars.as_str()
+        }
+
+        // println!("describe: {}:{}", rem_first(ns), symbol);
+
+        // let describe_cmd =
+        format!("(core:describe '{}:{})", rem_first(ns), symbol).to_string()
+        // ;
+        // let sym_list = Core::eval_rstring(&env.core.as_ref().unwrap().system, describe_cmd);
+    }
+
+    pub fn update(&mut self, env: &Environment, message: SymbolsMessage) {
         match message {
-            SymbolsMessage::Selected(str) => {
-                println!("selects: {}", str)
+            SymbolsMessage::SelectSymbol(str) => {
+                self.selected_symbol = Some(str);
+                self.describe = Some(Self::describe_symbol(
+                    env,
+                    self.selected_ns.as_ref().unwrap(),
+                    self.selected_symbol.as_ref().unwrap(),
+                ));
             }
-            SymbolsMessage::Refresh => {
-                let names = vec!["nil".to_string(), "mu".to_string(), "core".to_string()];
-
-                // names.refresh_all();
-
-                self.namespaces = names;
+            SymbolsMessage::SelectNamespace(str) => {
+                self.selected_ns = Some(str.clone());
+                self.symbols = Some(Self::fetch_symbols_list(env, str.to_string()));
             }
+            SymbolsMessage::Refresh => match self.namespaces {
+                Some(_) => (),
+                None => self.namespaces = Some(Self::fetch_ns_list(env)),
+            },
         }
     }
 
     fn namespaces(&self, width: i32, height: i32) -> Element<SymbolsMessage> {
-        let selection_list = SelectionList::new_with(
-            &self.namespaces,
-            SymbolsMessage::Selected,
-            12.0,
-            5.0,
-            SelectionListStyles::Default,
-        )
-        .width(Length::Shrink)
-        .height(Length::Fixed(100.0));
+        match &self.namespaces {
+            Some(symvec) => {
+                let selection_list = SelectionList::new_with(
+                    symvec,
+                    SymbolsMessage::SelectNamespace,
+                    16.0,
+                    1.0,
+                    SelectionListStyles::Default,
+                )
+                .width(Length::Shrink)
+                .height(Length::Fixed(100.0));
 
-        let column = column!(
-            text("namespaces:".to_string()).size(20),
-            horizontal_rule(1),
-            Space::new(width as u16, 5),
-            selection_list,
-        );
+                let column = column!(
+                    text("namespaces:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                    selection_list,
+                );
 
-        let content: Element<_> = column
-            .width(width as f32)
-            .height(height as f32)
-            .spacing(2)
-            .into();
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+            None => {
+                let column = column!(
+                    text("namespaces:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                );
+
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
+
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+        }
     }
 
     fn namespace_symbols(
@@ -97,45 +193,115 @@ impl SymbolsTab {
         width: i32,
         height: i32,
     ) -> Element<SymbolsMessage> {
-        let column = column!(
-            text("namespaces:".to_string()).size(20),
-            horizontal_rule(1),
-            Space::new(width as u16, 5),
-        );
+        match &self.symbols {
+            Some(symvec) => {
+                let selection_list = SelectionList::new_with(
+                    symvec,
+                    SymbolsMessage::SelectSymbol,
+                    16.0,
+                    1.0,
+                    SelectionListStyles::Default,
+                )
+                .width(Length::Shrink)
+                .height(Length::Fixed(100.0));
 
-        let ns_col = column;
+                let column = column!(
+                    text("symbols:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                    selection_list,
+                );
 
-        let content: Element<_> = ns_col
-            .width(width as f32)
-            .height(height as f32)
-            .spacing(2)
-            .into();
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+            None => {
+                let column = column!(
+                    text("symbols:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                );
+
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
+
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+        }
     }
 
     fn symbol(&self, _: &Environment, width: i32, height: i32) -> Element<SymbolsMessage> {
-        let column = column!(
-            text("symbol:".to_string()).size(20),
-            horizontal_rule(1),
-            Space::new(width as u16, 5),
-        );
+        fn rem_first(value: &str) -> &str {
+            let mut chars = value.chars();
+            chars.next();
+            chars.as_str()
+        }
 
-        let ns_col = column;
+        match &self.describe {
+            Some(descr) => {
+                let column = column!(
+                    text(format!(
+                        "{}:{}",
+                        rem_first(self.selected_ns.as_ref().unwrap()),
+                        self.selected_symbol.as_ref().unwrap()
+                    ))
+                    .size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                    text(descr).size(20),
+                );
 
-        let content: Element<_> = ns_col
-            .width(width as f32)
-            .height(height as f32)
-            .spacing(2)
-            .into();
+                // let lines = self.describe.as_ref().unwrap().split('\n').collect::<Vec<&str>>();
+                // for line in lines {
+                //     column.push(text(line.to_string()).size(20));
+                // }
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
+
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+            None => {
+                let blank = " ".to_string();
+
+                let column = column!(
+                    text(&blank).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                );
+
+                let content: Element<_> = column
+                    .width(width as f32)
+                    .height(height as f32)
+                    .spacing(2)
+                    .into();
+
+                container(content)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
+            }
+        }
     }
 
     fn inspect(&self, _: &Environment, width: i32, height: i32) -> Element<SymbolsMessage> {

@@ -8,7 +8,7 @@ use {
     std::{fs::File, io::BufReader},
 };
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Config {
     #[serde(default, with = "::serde_with::rust::double_option")]
     pub window: Option<Option<Window>>,
@@ -18,7 +18,7 @@ pub struct Config {
     pub mu: Option<Option<String>>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Window {
     #[serde(default, with = "::serde_with::rust::double_option")]
     size: Option<Option<(u32, u32)>>,
@@ -30,7 +30,7 @@ pub struct Window {
     resizable: Option<Option<bool>>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct TextUi {
     #[serde(default, with = "::serde_with::rust::double_option")]
     rows: Option<Option<usize>>,

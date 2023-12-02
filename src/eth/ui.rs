@@ -83,12 +83,12 @@ pub struct Ui {
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    Scratchpad(ScratchpadMessage),
+    TabSelected(usize),
     EventOccurred(Event),
     About(AboutMessage),
     Listener(ListenerMessage),
+    Scratchpad(ScratchpadMessage),
     Symbols(SymbolsMessage),
-    TabSelected(usize),
 }
 
 impl Application for Ui {
@@ -97,22 +97,22 @@ impl Application for Ui {
     type Flags = Environment;
     type Message = Message;
 
-    fn new(env: Environment) -> (Ui, Command<Message>) {
+    fn new<'a>(env: Environment) -> (Ui, Command<Message>) {
         let tab_bar = Ui {
-            version: "0.0.3".to_string(),
+            env,
+            version: "0.0.4".to_string(),
             active_tab: 0,
             scratchpad_tab: ScratchpadTab::new(),
             about_tab: AboutTab::new(),
             listener_tab: ListenerTab::new(),
             symbols_tab: SymbolsTab::new(),
             poll_interval_secs: 10,
-            env,
         };
 
-        let (opt, _) = &tab_bar.env.config;
+        let (opt, _) = tab_bar.env.config;
         match opt {
             Some(how) => {
-                if *how {
+                if how {
                     tab_bar
                         .about_tab
                         .log("eth: config directory missing, using default config".to_string())
@@ -153,15 +153,19 @@ impl Application for Ui {
 
     fn update(&mut self, message: Self::Message) -> Command<Message> {
         match message {
-            Message::TabSelected(selected) => self.active_tab = selected,
+            Message::TabSelected(selected) => {
+                self.active_tab = selected;
+                self.symbols_tab.update(&self.env, SymbolsMessage::Refresh);
+                self.about_tab.update(&self.env, AboutMessage::Refresh)
+            }
             Message::EventOccurred(event) => {
                 self.listener_tab
                     .update(&self.env, ListenerMessage::EventOccurred(event));
             }
             Message::Listener(message) => self.listener_tab.update(&self.env, message),
             Message::Scratchpad(message) => self.scratchpad_tab.update(message),
-            Message::About(message) => self.about_tab.update(message),
-            Message::Symbols(message) => self.symbols_tab.update(message),
+            Message::About(message) => self.about_tab.update(&self.env, message),
+            Message::Symbols(message) => self.symbols_tab.update(&self.env, message),
         }
 
         Command::none()

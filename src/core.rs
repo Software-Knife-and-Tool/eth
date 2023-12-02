@@ -61,7 +61,7 @@ impl Core {
         self.system.mu().eq(self.nil, tag)
     }
 
-    fn eval_rstring(system: &System, expr: String) -> Tag {
+    pub fn eval_rstring(system: &System, expr: String) -> Tag {
         system
             .mu()
             .eval(
