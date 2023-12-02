@@ -79,13 +79,12 @@ impl AboutTab {
         self.console.log(message);
     }
 
-    pub fn update(&mut self, message: AboutMessage) {
+    pub fn update(&mut self, _: &Environment, message: AboutMessage) {
         match message {
             AboutMessage::Refresh => {
                 let mut info = System::new_all();
 
                 info.refresh_all();
-
                 self.info = info;
             }
         }
