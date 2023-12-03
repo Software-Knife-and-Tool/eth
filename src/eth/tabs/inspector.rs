@@ -26,26 +26,26 @@ use {
 };
 
 #[derive(Debug, Clone)]
-pub enum SymbolsMessage {
+pub enum InspectorMessage {
     SelectSymbol(String),
     SelectNamespace(String),
     Refresh,
 }
 
-pub struct SymbolsTab {
+pub struct InspectorTab {
     namespaces: Option<Vec<String>>,
     selected_ns: Option<String>,
-    symbols: Option<Vec<String>>,
+    inspector: Option<Vec<String>>,
     selected_symbol: Option<String>,
     describe: Option<String>,
 }
 
-impl SymbolsTab {
+impl InspectorTab {
     pub fn new() -> Self {
         Self {
             namespaces: None,
             selected_ns: None,
-            symbols: None,
+            inspector: None,
             selected_symbol: None,
             describe: None,
         }
@@ -99,24 +99,22 @@ impl SymbolsTab {
         syms
     }
 
-    fn describe_symbol(_env: &Environment, ns: &str, symbol: &String) -> String {
+    fn describe_symbol(env: &Environment, ns: &str, symbol: &String) -> String {
         fn rem_first(value: &str) -> &str {
             let mut chars = value.chars();
             chars.next();
             chars.as_str()
         }
 
-        // println!("describe: {}:{}", rem_first(ns), symbol);
+        let describe_cmd = format!("(eth:describe '{}:{})", rem_first(ns), symbol).to_string();
+        let descr_str = Core::eval_rstring(&env.core.as_ref().unwrap().system, describe_cmd);
 
-        // let describe_cmd =
-        format!("(core:describe '{}:{})", rem_first(ns), symbol).to_string()
-        // ;
-        // let sym_list = Core::eval_rstring(&env.core.as_ref().unwrap().system, describe_cmd);
+        env.core.as_ref().unwrap().system.write(descr_str, false)
     }
 
-    pub fn update(&mut self, env: &Environment, message: SymbolsMessage) {
+    pub fn update(&mut self, env: &Environment, message: InspectorMessage) {
         match message {
-            SymbolsMessage::SelectSymbol(str) => {
+            InspectorMessage::SelectSymbol(str) => {
                 self.selected_symbol = Some(str);
                 self.describe = Some(Self::describe_symbol(
                     env,
@@ -124,23 +122,23 @@ impl SymbolsTab {
                     self.selected_symbol.as_ref().unwrap(),
                 ));
             }
-            SymbolsMessage::SelectNamespace(str) => {
+            InspectorMessage::SelectNamespace(str) => {
                 self.selected_ns = Some(str.clone());
-                self.symbols = Some(Self::fetch_symbols_list(env, str.to_string()));
+                self.inspector = Some(Self::fetch_symbols_list(env, str.to_string()));
             }
-            SymbolsMessage::Refresh => match self.namespaces {
+            InspectorMessage::Refresh => match self.namespaces {
                 Some(_) => (),
                 None => self.namespaces = Some(Self::fetch_ns_list(env)),
             },
         }
     }
 
-    fn namespaces(&self, width: i32, height: i32) -> Element<SymbolsMessage> {
-        match &self.namespaces {
+    fn namespaces(&self, width: i32, height: i32) -> Element<InspectorMessage> {
+        let column = match &self.namespaces {
             Some(symvec) => {
                 let selection_list = SelectionList::new_with(
                     symvec,
-                    SymbolsMessage::SelectNamespace,
+                    InspectorMessage::SelectNamespace,
                     16.0,
                     1.0,
                     SelectionListStyles::Default,
@@ -148,43 +146,32 @@ impl SymbolsTab {
                 .width(Length::Shrink)
                 .height(Length::Fixed(100.0));
 
-                let column = column!(
+                column!(
                     text("namespaces:".to_string()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
                     selection_list,
-                );
-
-                let content: Element<_> = column
-                    .width(width as f32)
-                    .height(height as f32)
-                    .spacing(2)
-                    .into();
-
-                container(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into()
+                )
             }
             None => {
-                let column = column!(
+                column!(
                     text("namespaces:".to_string()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
-                );
-
-                let content: Element<_> = column
-                    .width(width as f32)
-                    .height(height as f32)
-                    .spacing(2)
-                    .into();
-
-                container(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into()
+                )
             }
-        }
+        };
+
+        let content: Element<_> = column
+            .width(width as f32)
+            .height(height as f32)
+            .spacing(2)
+            .into();
+
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
     fn namespace_symbols(
@@ -192,12 +179,12 @@ impl SymbolsTab {
         _: &Environment,
         width: i32,
         height: i32,
-    ) -> Element<SymbolsMessage> {
-        match &self.symbols {
+    ) -> Element<InspectorMessage> {
+        let column = match &self.inspector {
             Some(symvec) => {
                 let selection_list = SelectionList::new_with(
                     symvec,
-                    SymbolsMessage::SelectSymbol,
+                    InspectorMessage::SelectSymbol,
                     16.0,
                     1.0,
                     SelectionListStyles::Default,
@@ -205,46 +192,35 @@ impl SymbolsTab {
                 .width(Length::Shrink)
                 .height(Length::Fixed(100.0));
 
-                let column = column!(
-                    text("symbols:".to_string()).size(20),
+                column!(
+                    text(self.selected_ns.as_ref().unwrap()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
                     selection_list,
-                );
-
-                let content: Element<_> = column
-                    .width(width as f32)
-                    .height(height as f32)
-                    .spacing(2)
-                    .into();
-
-                container(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into()
+                )
             }
             None => {
-                let column = column!(
-                    text("symbols:".to_string()).size(20),
+                column!(
+                    text(" ".to_string()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
-                );
-
-                let content: Element<_> = column
-                    .width(width as f32)
-                    .height(height as f32)
-                    .spacing(2)
-                    .into();
-
-                container(content)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                    .into()
+                )
             }
-        }
+        };
+
+        let content: Element<_> = column
+            .width(width as f32)
+            .height(height as f32)
+            .spacing(2)
+            .into();
+
+        container(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 
-    fn symbol(&self, _: &Environment, width: i32, height: i32) -> Element<SymbolsMessage> {
+    fn symbol(&self, _: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
         fn rem_first(value: &str) -> &str {
             let mut chars = value.chars();
             chars.next();
@@ -262,13 +238,8 @@ impl SymbolsTab {
                     .size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
-                    text(descr).size(20),
+                    text(descr).size(16),
                 );
-
-                // let lines = self.describe.as_ref().unwrap().split('\n').collect::<Vec<&str>>();
-                // for line in lines {
-                //     column.push(text(line.to_string()).size(20));
-                // }
 
                 let content: Element<_> = column
                     .width(width as f32)
@@ -304,7 +275,7 @@ impl SymbolsTab {
         }
     }
 
-    fn inspect(&self, _: &Environment, width: i32, height: i32) -> Element<SymbolsMessage> {
+    fn inspect(&self, _: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
         let column = column!(
             text("inspect:".to_string()).size(20),
             horizontal_rule(1),
@@ -326,7 +297,7 @@ impl SymbolsTab {
     }
 
     pub fn view(&self, env: &Environment) -> Element<'_, Message, Renderer> {
-        let content: Element<'_, SymbolsMessage> = Container::new(
+        let content: Element<'_, InspectorMessage> = Container::new(
             Column::new()
                 .align_items(Alignment::Start)
                 .max_width(800)
@@ -346,11 +317,11 @@ impl SymbolsTab {
         .align_y(Vertical::Top)
         .into();
 
-        content.map(Message::Symbols)
+        content.map(Message::Inspector)
     }
 }
 
-impl Tab for SymbolsTab {
+impl Tab for InspectorTab {
     type Message = Message;
 
     fn title(&self) -> String {
@@ -358,7 +329,7 @@ impl Tab for SymbolsTab {
     }
 
     fn tab_label(&self) -> TabLabel {
-        TabLabel::Text("symbols".to_string())
+        TabLabel::Text("inspector".to_string())
     }
 
     fn content(&self) -> Element<'_, Self::Message> {

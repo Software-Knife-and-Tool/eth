@@ -11,9 +11,9 @@ use {
     super::super::{Core, Environment},
     crate::eth::tabs::{
         about::{AboutMessage, AboutTab},
+        inspector::{InspectorMessage, InspectorTab},
         listener::{ListenerMessage, ListenerTab},
         scratchpad::{ScratchpadMessage, ScratchpadTab},
-        symbols::{SymbolsMessage, SymbolsTab},
     },
     iced::{
         alignment::{Horizontal, Vertical},
@@ -75,7 +75,7 @@ pub struct Ui {
     env: Environment,
     about_tab: AboutTab,
     listener_tab: ListenerTab,
-    symbols_tab: SymbolsTab,
+    inspector_tab: InspectorTab,
     poll_interval_secs: u64,
     version: String,
     scratchpad_tab: ScratchpadTab,
@@ -88,7 +88,7 @@ pub enum Message {
     About(AboutMessage),
     Listener(ListenerMessage),
     Scratchpad(ScratchpadMessage),
-    Symbols(SymbolsMessage),
+    Inspector(InspectorMessage),
 }
 
 impl Application for Ui {
@@ -105,7 +105,7 @@ impl Application for Ui {
             scratchpad_tab: ScratchpadTab::new(),
             about_tab: AboutTab::new(),
             listener_tab: ListenerTab::new(),
-            symbols_tab: SymbolsTab::new(),
+            inspector_tab: InspectorTab::new(),
             poll_interval_secs: 10,
         };
 
@@ -155,7 +155,8 @@ impl Application for Ui {
         match message {
             Message::TabSelected(selected) => {
                 self.active_tab = selected;
-                self.symbols_tab.update(&self.env, SymbolsMessage::Refresh);
+                self.inspector_tab
+                    .update(&self.env, InspectorMessage::Refresh);
                 self.about_tab.update(&self.env, AboutMessage::Refresh)
             }
             Message::EventOccurred(event) => {
@@ -165,7 +166,7 @@ impl Application for Ui {
             Message::Listener(message) => self.listener_tab.update(&self.env, message),
             Message::Scratchpad(message) => self.scratchpad_tab.update(message),
             Message::About(message) => self.about_tab.update(&self.env, message),
-            Message::Symbols(message) => self.symbols_tab.update(&self.env, message),
+            Message::Inspector(message) => self.inspector_tab.update(&self.env, message),
         }
 
         Command::none()
@@ -183,8 +184,8 @@ impl Application for Ui {
                 self.listener_tab.view(&self.env),
             )
             .push(
-                self.symbols_tab.tab_label(),
-                self.symbols_tab.view(&self.env),
+                self.inspector_tab.tab_label(),
+                self.inspector_tab.view(&self.env),
             )
             .into()
     }

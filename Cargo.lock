@@ -619,9 +619,9 @@ dependencies = [
 
 [[package]]
 name = "deranged"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f32d04922c60427da6f9fef14d042d9edddef64cb9d4ce0d64d0685fbeb1fd3"
+checksum = "8eb30d70a07a3b04884d2677f06bec33509dc67ca60d92949e5535352d3191dc"
 dependencies = [
  "powerfmt",
  "serde",
@@ -1790,7 +1790,7 @@ dependencies = [
 [[package]]
 name = "mu"
 version = "0.0.1"
-source = "git+https://github.com/Software-Knife-and-Tool/thorn.git?branch=main#4c85a1b84ed17c9e0fd0ea656ef99424cc3e8832"
+source = "git+https://github.com/Software-Knife-and-Tool/thorn.git?branch=main#dcd99fbb7f05b2cf1aa2bd35c31866bee59ff60e"
 dependencies = [
  "cpu-time",
  "futures",
