@@ -1,6 +1,6 @@
 ;;; eth namespace
 (mu:make-ns :eth)
-(mu:intern :eth "json-cmd-stream" (mu:open :string :output ""))
+
 
 (mu:intern :eth "load"
   (:lambda (source)
@@ -60,7 +60,17 @@
 
 (eth:load-core)
 
-;;; utilities
+;;; inspector utilities
+(mu:intern :eth "describe-stream" (mu:open :string :output ""))
+
+(mu:intern :eth "describe"
+   (:lambda (obj)
+     (core:describe obj eth:describe-stream)
+     (mu:get-str eth:describe-stream)))
+
+;;; json utilities
+(mu:intern :eth "json-cmd-stream" (mu:open :string :output ""))
+
 (mu:intern :eth "write-json"
   (:lambda (form stream)
     (:if (core:stringp form)
@@ -90,6 +100,7 @@
                        (core:format stream " }" ())))
                    (core:format stream " ~S " `(,form)))))))
 
+;;; scratchpad functions
 (mu:intern :eth "defbutton"
   (:lambda (group label form stream)
     (eth:write-json
