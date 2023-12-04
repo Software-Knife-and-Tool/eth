@@ -59,6 +59,7 @@
      "/opt/thorn/thorn/core/vector.l"))))
 
 (eth:load-core)
+(core:%init-core-ns)
 
 ;;; inspector utilities
 (mu:intern :eth "describe-stream" (mu:open :string :output ""))
