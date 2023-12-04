@@ -73,11 +73,11 @@ impl StatusBar {
 pub struct Ui {
     active_tab: usize,
     env: Environment,
+    poll_interval_secs: u64,
+    version: String,
     about_tab: AboutTab,
     listener_tab: ListenerTab,
     inspector_tab: InspectorTab,
-    poll_interval_secs: u64,
-    version: String,
     scratchpad_tab: ScratchpadTab,
 }
 
@@ -99,14 +99,14 @@ impl Application for Ui {
 
     fn new<'a>(env: Environment) -> (Ui, Command<Message>) {
         let tab_bar = Ui {
-            env,
-            version: "0.0.4".to_string(),
             active_tab: 0,
-            scratchpad_tab: ScratchpadTab::new(),
-            about_tab: AboutTab::new(),
-            listener_tab: ListenerTab::new(),
-            inspector_tab: InspectorTab::new(),
+            env,
             poll_interval_secs: 10,
+            version: "0.0.4".to_string(),
+            about_tab: AboutTab::new(),
+            inspector_tab: InspectorTab::new(),
+            listener_tab: ListenerTab::new(),
+            scratchpad_tab: ScratchpadTab::new(),
         };
 
         let (opt, _) = tab_bar.env.config;
