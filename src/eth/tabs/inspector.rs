@@ -11,24 +11,28 @@ use {
         super::{Core, Environment},
         ui::{Message, Tab},
     },
-    iced::widget::scrollable,
     iced::{
         alignment::{Horizontal, Vertical},
-        widget::{column, container, horizontal_rule, text, Column, Container, Row, Space, Text},
-        Alignment, Element, Font, Length, Renderer,
+        theme,
+        widget::{button, column, row, scrollable},
+        widget::{container, horizontal_rule, text},
+        widget::{Column, Container, Row, Space, Text},
+        Alignment, Background, Color, Element, Font, Length, Renderer,
     },
     iced_aw::{
-        selection_list::{SelectionList, SelectionListStyles},
+        selection_list::{selection_list, SelectionList, SelectionListStyles},
         tab_bar::TabLabel,
     },
     mu::{Condition, Exception, Mu, Result, System as MuSystem, Tag},
     sysinfo::{System, SystemExt},
 };
 
+// inspector
 #[derive(Debug, Clone)]
 pub enum InspectorMessage {
     SelectSymbol(String),
     SelectNamespace(String),
+    Clear,
     Refresh,
 }
 
@@ -51,20 +55,25 @@ impl InspectorTab {
         }
     }
 
-    fn fetch_ns_list(env: &Environment) -> Vec<String> {
-        fn rem_first_and_last(value: &str) -> &str {
-            let mut chars = value.chars();
-            chars.next();
-            chars.next_back();
-            chars.as_str()
-        }
+    fn trimr(value: &str) -> &str {
+        let mut chars = value.chars();
+        chars.next_back();
+        chars.as_str()
+    }
 
+    fn triml(value: &str) -> &str {
+        let mut chars = value.chars();
+        chars.next();
+        chars.as_str()
+    }
+
+    fn fetch_ns_list(env: &Environment) -> Vec<String> {
         let ns_list = Core::eval_rstring(
             &env.core.as_ref().unwrap().system,
             "(mu:ns-map)".to_string(),
         );
-        let ns_str = env.core.as_ref().unwrap().system.write(ns_list, false);
-        let trim = rem_first_and_last(&ns_str).to_string();
+        let ns_string = env.core.as_ref().unwrap().system.write(ns_list, false);
+        let trim = Self::triml(Self::trimr(&ns_string)).to_string();
         let slice = &trim.split(' ').collect::<Vec<&str>>();
 
         let mut ns = vec![];
@@ -77,17 +86,12 @@ impl InspectorTab {
     }
 
     fn fetch_symbols_list(env: &Environment, ns: String) -> Vec<String> {
-        fn rem_first_and_last(value: &str) -> &str {
-            let mut chars = value.chars();
-            chars.next();
-            chars.next_back();
-            chars.as_str()
-        }
-
-        let syms_cmd = format!("(mu:ns-syms :list {})", ns).to_string();
-        let sym_list = Core::eval_rstring(&env.core.as_ref().unwrap().system, syms_cmd);
+        let sym_list = Core::eval_rstring(
+            &env.core.as_ref().unwrap().system,
+            format!("(mu:ns-syms :list {})", ns).to_string(),
+        );
         let sym_str = env.core.as_ref().unwrap().system.write(sym_list, false);
-        let trim = rem_first_and_last(&sym_str).to_string();
+        let trim = Self::triml(Self::trimr(&sym_str)).to_string();
         let slice = &trim.split(' ').collect::<Vec<&str>>();
 
         let mut syms = vec![];
@@ -100,13 +104,7 @@ impl InspectorTab {
     }
 
     fn describe_symbol(env: &Environment, ns: &str, symbol: &String) -> String {
-        fn rem_first(value: &str) -> &str {
-            let mut chars = value.chars();
-            chars.next();
-            chars.as_str()
-        }
-
-        let describe_cmd = format!("(eth:describe '{}:{})", rem_first(ns), symbol).to_string();
+        let describe_cmd = format!("(eth:describe '{}:{})", Self::triml(ns), symbol).to_string();
         let descr_str = Core::eval_rstring(&env.core.as_ref().unwrap().system, describe_cmd);
 
         env.core.as_ref().unwrap().system.write(descr_str, false)
@@ -124,12 +122,20 @@ impl InspectorTab {
             }
             InspectorMessage::SelectNamespace(str) => {
                 self.selected_ns = Some(str.clone());
+                self.selected_symbol = None;
+                self.describe = None;
                 self.inspector = Some(Self::fetch_symbols_list(env, str.to_string()));
             }
             InspectorMessage::Refresh => match self.namespaces {
                 Some(_) => (),
                 None => self.namespaces = Some(Self::fetch_ns_list(env)),
             },
+            InspectorMessage::Clear => {
+                self.selected_ns = None;
+                self.selected_symbol = None;
+                self.inspector = None;
+                self.describe = None
+            }
         }
     }
 
@@ -297,11 +303,24 @@ impl InspectorTab {
     }
 
     pub fn view(&self, env: &Environment) -> Element<'_, Message, Renderer> {
+        let controls = row![
+            button(text("clear".to_string()).size(13))
+                .height(28)
+                .style(theme::Button::Primary)
+                .on_press(InspectorMessage::Clear),
+            button(text("refresh".to_string()).size(13))
+                .height(28)
+                .style(theme::Button::Primary)
+                .on_press(InspectorMessage::Refresh)
+        ]
+        .spacing(8);
+
         let content: Element<'_, InspectorMessage> = Container::new(
             Column::new()
                 .align_items(Alignment::Start)
                 .max_width(800)
                 .padding(20)
+                .push(controls.width(Length::Fill))
                 .push(
                     Row::new()
                         .align_items(Alignment::Start)
