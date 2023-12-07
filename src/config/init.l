@@ -1,7 +1,6 @@
 ;;; eth namespace
 (mu:make-ns :eth)
 
-
 (mu:intern :eth "load"
   (:lambda (source)
     ((:lambda (ifs)
@@ -38,6 +37,7 @@
      "/opt/thorn/thorn/core/format.l"
      "/opt/thorn/thorn/core/funcall.l"
      "/opt/thorn/thorn/core/function.l"
+     "/opt/thorn/thorn/core/inspect.l"
      "/opt/thorn/thorn/core/lambda.l"
      "/opt/thorn/thorn/core/list.l"
      "/opt/thorn/thorn/core/log.l"
@@ -62,12 +62,81 @@
 (core:%init-core-ns)
 
 ;;; inspector utilities
-(mu:intern :eth "describe-stream" (mu:open :string :output ""))
+(mu:intern :eth "inspect-stream" (mu:open :string :output ""))
 
-(mu:intern :eth "describe"
+(mu:intern :eth "inspect"
    (:lambda (obj)
-     (core:describe obj eth:describe-stream)
-     (mu:get-str eth:describe-stream)))
+     ((:lambda (inspect)
+        (core:format
+         eth:inspect-stream
+         ":type ~A~%:size ~A~%"
+         `(,(mu:sv-ref (mu:st-vec inspect) 0)
+           ,(mu:sv-ref (mu:st-vec inspect) 1)))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect obj))))
+
+(mu:intern :eth "inspect-tag-keys"
+   (:lambda (obj)
+     ((:lambda (inspect)
+        (core:mapc
+         (:lambda (tag)
+           (core:format
+            eth:inspect-stream
+            "~A;"
+            `(,(mu:car tag))))
+         (mu:sv-ref (mu:st-vec inspect) 2))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect obj))))
+
+(mu:intern :eth "inspect-tag-values"
+   (:lambda (obj)
+     ((:lambda (inspect)
+        (core:mapc
+         (:lambda (tag)
+           (core:format
+            eth:inspect-stream
+            "~A;"
+            `(,(mu:repr :vector (mu:cdr tag)))))
+         (mu:sv-ref (mu:st-vec inspect) 2))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect obj))))
+
+(mu:intern :eth "inspect-repr"
+   (:lambda (repr)
+     ((:lambda (inspect)
+        (core:format
+         eth:inspect-stream
+         ":type ~A~%:size ~A~%"
+         `(,(mu:sv-ref (mu:st-vec inspect) 0)
+           ,(mu:sv-ref (mu:st-vec inspect) 1)))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect (mu:repr :t repr)))))
+
+(mu:intern :eth "inspect-repr-tag-keys"
+   (:lambda (repr)
+     ((:lambda (inspect)
+        (core:mapc
+         (:lambda (tag)
+           (core:format
+            eth:inspect-stream
+            "~A;"
+            `(,(mu:car tag))))
+         (mu:sv-ref (mu:st-vec inspect) 2))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect (mu:repr :t repr)))))
+
+(mu:intern :eth "inspect-object-tag-values"
+   (:lambda (repr)
+     ((:lambda (inspect)
+        (core:mapc
+         (:lambda (tag)
+           (core:format
+            eth:inspect-stream
+            "~A;"
+            `(,(mu:repr :vector (mu:cdr tag)))))
+         (mu:sv-ref (mu:st-vec inspect) 2))
+        (mu:get-str eth:inspect-stream))
+        (core:%inspect (mu:repr :t repr)))))
 
 ;;; json utilities
 (mu:intern :eth "json-cmd-stream" (mu:open :string :output ""))

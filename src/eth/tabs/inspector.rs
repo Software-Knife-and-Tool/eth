@@ -28,30 +28,39 @@ use {
 };
 
 // inspector
+pub struct InspectorTab {
+    namespaces: Option<Vec<String>>,
+    namespace: Option<String>,
+    namespace_symbols: Option<Vec<String>>,
+    symbol: Option<String>,
+    symbol_tag_keys: Option<Vec<String>>,
+    symbol_tag_key: Option<String>,
+    symbol_tag_values: Option<Vec<String>>,
+    symbol_tag_value: Option<String>,
+    object_info: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub enum InspectorMessage {
     SelectSymbol(String),
     SelectNamespace(String),
+    SelectSymbolTagKey(String),
     Clear,
     Refresh,
-}
-
-pub struct InspectorTab {
-    namespaces: Option<Vec<String>>,
-    selected_ns: Option<String>,
-    inspector: Option<Vec<String>>,
-    selected_symbol: Option<String>,
-    describe: Option<String>,
 }
 
 impl InspectorTab {
     pub fn new() -> Self {
         Self {
             namespaces: None,
-            selected_ns: None,
-            inspector: None,
-            selected_symbol: None,
-            describe: None,
+            namespace: None,
+            namespace_symbols: None,
+            symbol: None,
+            symbol_tag_keys: None,
+            symbol_tag_key: None,
+            symbol_tag_values: None,
+            symbol_tag_value: None,
+            object_info: None,
         }
     }
 
@@ -67,74 +76,170 @@ impl InspectorTab {
         chars.as_str()
     }
 
-    fn fetch_ns_list(env: &Environment) -> Vec<String> {
-        let ns_list = Core::eval_rstring(
-            &env.core.as_ref().unwrap().system,
-            "(mu:ns-map)".to_string(),
-        );
-        let ns_string = env.core.as_ref().unwrap().system.write(ns_list, false);
-        let trim = Self::triml(Self::trimr(&ns_string)).to_string();
-        let slice = &trim.split(' ').collect::<Vec<&str>>();
+    fn list_to_vec(env: &Environment, list: Tag) -> Vec<String> {
+        let core = env.core.as_ref().unwrap();
 
-        let mut ns = vec![];
-
-        for ns_ in slice {
-            ns.push(ns_.to_string())
+        let list_str = core.system.write(list, false);
+        if core.system.mu().eq(core.nil, list) {
+            return vec![];
         }
 
-        ns
+        let trim = Self::triml(Self::trimr(&list_str)).to_string();
+        trim.split(' ')
+            .map(|str| str.to_string())
+            .collect::<Vec<_>>()
+    }
+
+    fn list_to_sorted_vec(env: &Environment, list: Tag) -> Vec<String> {
+        let mut sorted_vec = Self::list_to_vec(env, list);
+
+        sorted_vec.sort_by_key(|a| a.to_lowercase());
+
+        sorted_vec
+    }
+
+    fn fetch_ns_list(env: &Environment) -> Vec<String> {
+        let core = env.core.as_ref().unwrap();
+        let list = Core::eval_rstring(&core.system, "(mu:ns-map)".to_string());
+
+        Self::list_to_sorted_vec(env, list)
     }
 
     fn fetch_symbols_list(env: &Environment, ns: String) -> Vec<String> {
-        let sym_list = Core::eval_rstring(
-            &env.core.as_ref().unwrap().system,
+        let core = env.core.as_ref().unwrap();
+        let list = Core::eval_rstring(
+            &core.system,
             format!("(mu:ns-syms :list {})", ns).to_string(),
         );
-        let sym_str = env.core.as_ref().unwrap().system.write(sym_list, false);
-        let trim = Self::triml(Self::trimr(&sym_str)).to_string();
-        let slice = &trim.split(' ').collect::<Vec<&str>>();
 
-        let mut syms = vec![];
-
-        for sym in slice {
-            syms.push(sym.to_string())
-        }
-
-        syms
+        Self::list_to_sorted_vec(env, list)
     }
 
-    fn describe_symbol(env: &Environment, ns: &str, symbol: &String) -> String {
-        let describe_cmd = format!("(eth:describe '{}:{})", Self::triml(ns), symbol).to_string();
-        let descr_str = Core::eval_rstring(&env.core.as_ref().unwrap().system, describe_cmd);
+    fn inspect_repr(env: &Environment, repr: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+        let inspect_cmd = format!("(eth:inspect-repr {})", repr);
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
 
-        env.core.as_ref().unwrap().system.write(descr_str, false)
+        core.system.write(inspect_str, false)
+    }
+
+    fn inspect_repr_tag_keys(env: &Environment, repr: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+        let inspect_cmd = format!("(eth:inspect-repr-tag-keys {})", repr).to_string();
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
+
+        core.system.write(inspect_str, false)
+    }
+
+    fn inspect_repr_tag_values(env: &Environment, repr: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+        let inspect_cmd = format!("(eth:inspect-repr-tag-values {})", repr).to_string();
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
+
+        core.system.write(inspect_str, false)
+    }
+
+    fn inspect_symbol(env: &Environment, ns: &str, symbol: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+
+        let inspect_cmd = format!("(eth:inspect '{}:{})", Self::triml(ns), symbol).to_string();
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
+
+        core.system.write(inspect_str, false)
+    }
+
+    fn inspect_symbol_tag_keys(env: &Environment, ns: &str, symbol: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+
+        let inspect_cmd =
+            format!("(eth:inspect-tag-keys '{}:{})", Self::triml(ns), symbol).to_string();
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
+
+        core.system.write(inspect_str, false)
+    }
+
+    fn inspect_symbol_tag_values(env: &Environment, ns: &str, symbol: &String) -> String {
+        let core = env.core.as_ref().unwrap();
+
+        let inspect_cmd =
+            format!("(eth:inspect-tag-values '{}:{})", Self::triml(ns), symbol).to_string();
+        let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
+
+        core.system.write(inspect_str, false)
     }
 
     pub fn update(&mut self, env: &Environment, message: InspectorMessage) {
         match message {
             InspectorMessage::SelectSymbol(str) => {
-                self.selected_symbol = Some(str);
-                self.describe = Some(Self::describe_symbol(
+                self.symbol = Some(str);
+
+                self.symbol_tag_keys = Some(
+                    Self::trimr(&Self::inspect_symbol_tag_keys(
+                        env,
+                        self.namespace.as_ref().unwrap(),
+                        self.symbol.as_ref().unwrap(),
+                    ))
+                    .to_string()
+                    .split(';')
+                    .map(|str| str.to_string())
+                    .collect::<Vec<_>>(),
+                );
+
+                self.symbol_tag_values = Some(
+                    Self::trimr(&Self::inspect_symbol_tag_values(
+                        env,
+                        self.namespace.as_ref().unwrap(),
+                        self.symbol.as_ref().unwrap(),
+                    ))
+                    .to_string()
+                    .split(';')
+                    .map(|str| str.to_string())
+                    .collect::<Vec<_>>(),
+                );
+
+                self.object_info = Some(Self::inspect_symbol(
                     env,
-                    self.selected_ns.as_ref().unwrap(),
-                    self.selected_symbol.as_ref().unwrap(),
+                    self.namespace.as_ref().unwrap(),
+                    self.symbol.as_ref().unwrap(),
                 ));
             }
+            InspectorMessage::SelectSymbolTagKey(str) => {
+                let key_offset = self
+                    .symbol_tag_keys
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .position(|list_str| *list_str == str)
+                    .unwrap();
+
+                self.symbol_tag_value =
+                    Some(self.symbol_tag_values.as_ref().unwrap()[key_offset].clone());
+
+                self.symbol_tag_key = Some(str.clone());
+            }
             InspectorMessage::SelectNamespace(str) => {
-                self.selected_ns = Some(str.clone());
-                self.selected_symbol = None;
-                self.describe = None;
-                self.inspector = Some(Self::fetch_symbols_list(env, str.to_string()));
+                self.namespace = Some(str.clone());
+                self.namespace_symbols = Some(Self::fetch_symbols_list(env, str.to_string()));
+                self.symbol = None;
+                self.symbol_tag_keys = None;
+                self.symbol_tag_key = None;
+                self.symbol_tag_values = None;
+                self.symbol_tag_value = None;
+                self.object_info = None;
             }
             InspectorMessage::Refresh => match self.namespaces {
                 Some(_) => (),
                 None => self.namespaces = Some(Self::fetch_ns_list(env)),
             },
             InspectorMessage::Clear => {
-                self.selected_ns = None;
-                self.selected_symbol = None;
-                self.inspector = None;
-                self.describe = None
+                self.namespace = None;
+                self.symbol = None;
+                self.namespace_symbols = None;
+                self.symbol_tag_keys = None;
+                self.symbol_tag_key = None;
+                self.symbol_tag_values = None;
+                self.symbol_tag_value = None;
+                self.object_info = None
             }
         }
     }
@@ -145,12 +250,12 @@ impl InspectorTab {
                 let selection_list = SelectionList::new_with(
                     symvec,
                     InspectorMessage::SelectNamespace,
-                    16.0,
+                    18.0,
                     1.0,
                     SelectionListStyles::Default,
                 )
-                .width(Length::Shrink)
-                .height(Length::Fixed(100.0));
+                .width(Length::Fixed(150.0))
+                .height(Length::Fixed(250.0));
 
                 column!(
                     text("namespaces:".to_string()).size(20),
@@ -186,20 +291,20 @@ impl InspectorTab {
         width: i32,
         height: i32,
     ) -> Element<InspectorMessage> {
-        let column = match &self.inspector {
-            Some(symvec) => {
+        let column = match &self.namespace_symbols {
+            Some(sym_vec) => {
                 let selection_list = SelectionList::new_with(
-                    symvec,
+                    sym_vec,
                     InspectorMessage::SelectSymbol,
-                    16.0,
+                    18.0,
                     1.0,
                     SelectionListStyles::Default,
                 )
-                .width(Length::Shrink)
-                .height(Length::Fixed(100.0));
+                .width(Length::Fixed(150.0))
+                .height(Length::Fixed(250.0));
 
                 column!(
-                    text(self.selected_ns.as_ref().unwrap()).size(20),
+                    text(self.namespace.as_ref().unwrap()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
                     selection_list,
@@ -227,24 +332,29 @@ impl InspectorTab {
     }
 
     fn symbol(&self, _: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
-        fn rem_first(value: &str) -> &str {
-            let mut chars = value.chars();
-            chars.next();
-            chars.as_str()
-        }
-
-        match &self.describe {
+        match &self.object_info {
             Some(descr) => {
+                let selection_list = SelectionList::new_with(
+                    self.symbol_tag_keys.as_ref().unwrap(),
+                    InspectorMessage::SelectSymbolTagKey,
+                    18.0,
+                    1.0,
+                    SelectionListStyles::Default,
+                )
+                .width(Length::Fixed(150.0))
+                .height(Length::Fixed(250.0));
+
                 let column = column!(
                     text(format!(
                         "{}:{}",
-                        rem_first(self.selected_ns.as_ref().unwrap()),
-                        self.selected_symbol.as_ref().unwrap()
+                        Self::triml(self.namespace.as_ref().unwrap()),
+                        self.symbol.as_ref().unwrap()
                     ))
                     .size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
                     text(descr).size(16),
+                    selection_list,
                 );
 
                 let content: Element<_> = column
@@ -281,16 +391,41 @@ impl InspectorTab {
         }
     }
 
-    fn inspect(&self, _: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
-        let column = column!(
-            text("inspect:".to_string()).size(20),
-            horizontal_rule(1),
-            Space::new(width as u16, 5),
-        );
+    fn inspect(&self, env: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
+        let column = match &self.symbol_tag_value {
+            Some(repr) => {
+                let selection_list = SelectionList::new_with(
+                    Self::inspect_repr_tag_keys(env, repr)
+                        .split(';')
+                        .map(|str| str.to_string())
+                        .collect::<Vec<_>>(),
+                    InspectorMessage::SelectSymbolTagKey,
+                    18.0,
+                    1.0,
+                    SelectionListStyles::Default,
+                )
+                .width(Length::Fixed(150.0))
+                .height(Length::Fixed(150.0));
 
-        let ns_col = column;
+                column!(
+                    text("inspect:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                    //                    text(format!("; {}", repr)).size(16),
+                    text(Self::inspect_repr(env, repr)).size(16),
+                    selection_list,
+                )
+            }
+            None => {
+                column!(
+                    text("inspect:".to_string()).size(20),
+                    horizontal_rule(1),
+                    Space::new(width as u16, 5),
+                )
+            }
+        };
 
-        let content: Element<_> = ns_col
+        let content: Element<_> = column
             .width(width as f32)
             .height(height as f32)
             .spacing(2)
