@@ -2012,7 +2012,7 @@ dependencies = [
 [[package]]
 name = "mu"
 version = "0.0.1"
-source = "git+https://github.com/Software-Knife-and-Tool/thorn.git?branch=main#374f23feb491fd239af88f15ddee5b134f83dbb2"
+source = "git+https://github.com/Software-Knife-and-Tool/thorn.git?branch=main#42883af1b58f49f1cbcab85793d691b04a1b006d"
 dependencies = [
  "cpu-time",
  "futures",
@@ -3971,9 +3971,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.5.22"
+version = "0.5.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40460c13b1e9b107cfc9ede71232f204c36250bbf6f9c78515e2e27ead3122a7"
+checksum = "0383266b19108dfc6314a56047aa545a1b4d1be60e799b4dbdd407b56402704b"
 dependencies = [
  "memchr",
 ]
@@ -4070,18 +4070,18 @@ checksum = "dd15f8e0dbb966fd9245e7498c7e9e5055d9e5c8b676b95bd67091cd11a1e697"
 
 [[package]]
 name = "zerocopy"
-version = "0.7.28"
+version = "0.7.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d6f15f7ade05d2a4935e34a457b936c23dc70a05cc1d97133dc99e7a3fe0f0e"
+checksum = "5d075cf85bbb114e933343e087b92f2146bac0d55b534cbb8188becf0039948e"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.7.28"
+version = "0.7.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbbad221e3f78500350ecbd7dfa4e63ef945c05f4c61cb7f4d3f84cd0bba649b"
+checksum = "86cd5ca076997b97ef09d3ad65efe811fa68c9e874cb636ccb211223a813b0c2"
 dependencies = [
  "proc-macro2",
  "quote",

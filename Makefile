@@ -15,7 +15,7 @@ run:
 world: release debug run commit clean
 
 config:
-	@cp ./config/* $(HOME)/.config/eth
+	@cp src/config/* $(HOME)/.config/eth
 
 commit:
 	@cargo fmt
