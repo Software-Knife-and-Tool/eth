@@ -29,15 +29,19 @@ use {
 
 // inspector
 pub struct InspectorTab {
-    namespaces: Option<Vec<String>>,
+    inspect_tag_key: Option<String>,
+    inspect_tag_keys: Option<Vec<String>>,
+    inspect_tag_repr: Option<String>,
+    inspect_tag_reprs: Option<Vec<String>>,
     namespace: Option<String>,
     namespace_symbols: Option<Vec<String>>,
+    namespaces: Option<Vec<String>>,
     symbol: Option<String>,
-    symbol_tag_keys: Option<Vec<String>>,
+    symbol_info: Option<String>,
     symbol_tag_key: Option<String>,
-    symbol_tag_values: Option<Vec<String>>,
-    symbol_tag_value: Option<String>,
-    object_info: Option<String>,
+    symbol_tag_keys: Option<Vec<String>>,
+    symbol_tag_repr: Option<String>,
+    symbol_tag_reprs: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +49,7 @@ pub enum InspectorMessage {
     SelectSymbol(String),
     SelectNamespace(String),
     SelectSymbolTagKey(String),
+    SelectInspectTagKey(String),
     Clear,
     Refresh,
 }
@@ -52,15 +57,19 @@ pub enum InspectorMessage {
 impl InspectorTab {
     pub fn new() -> Self {
         Self {
-            namespaces: None,
+            inspect_tag_key: None,
+            inspect_tag_keys: None,
+            inspect_tag_repr: None,
+            inspect_tag_reprs: None,
             namespace: None,
             namespace_symbols: None,
+            namespaces: None,
             symbol: None,
-            symbol_tag_keys: None,
+            symbol_info: None,
             symbol_tag_key: None,
-            symbol_tag_values: None,
-            symbol_tag_value: None,
-            object_info: None,
+            symbol_tag_keys: None,
+            symbol_tag_repr: None,
+            symbol_tag_reprs: None,
         }
     }
 
@@ -131,7 +140,7 @@ impl InspectorTab {
         core.system.write(inspect_str, false)
     }
 
-    fn inspect_repr_tag_values(env: &Environment, repr: &String) -> String {
+    fn inspect_repr_tag_reprs(env: &Environment, repr: &String) -> String {
         let core = env.core.as_ref().unwrap();
         let inspect_cmd = format!("(eth:inspect-repr-tag-values {})", repr).to_string();
         let inspect_str = Core::eval_rstring(&core.system, inspect_cmd);
@@ -158,7 +167,7 @@ impl InspectorTab {
         core.system.write(inspect_str, false)
     }
 
-    fn inspect_symbol_tag_values(env: &Environment, ns: &str, symbol: &String) -> String {
+    fn inspect_symbol_tag_reprs(env: &Environment, ns: &str, symbol: &String) -> String {
         let core = env.core.as_ref().unwrap();
 
         let inspect_cmd =
@@ -170,8 +179,28 @@ impl InspectorTab {
 
     pub fn update(&mut self, env: &Environment, message: InspectorMessage) {
         match message {
-            InspectorMessage::SelectSymbol(str) => {
-                self.symbol = Some(str);
+            InspectorMessage::SelectNamespace(str) => {
+                self.namespace = Some(str.clone());
+                self.namespace_symbols = Some(Self::fetch_symbols_list(env, str.to_string()));
+                self.inspect_tag_key = None;
+                self.inspect_tag_keys = None;
+                self.inspect_tag_repr = None;
+                self.inspect_tag_reprs = None;
+                self.symbol = None;
+                self.symbol_info = None;
+                self.symbol_tag_key = None;
+                self.symbol_tag_keys = None;
+                self.symbol_tag_repr = None;
+                self.symbol_tag_reprs = None;
+            }
+            InspectorMessage::SelectSymbol(name) => {
+                self.symbol = Some(name);
+
+                self.symbol_info = Some(Self::inspect_symbol(
+                    env,
+                    self.namespace.as_ref().unwrap(),
+                    self.symbol.as_ref().unwrap(),
+                ));
 
                 self.symbol_tag_keys = Some(
                     Self::trimr(&Self::inspect_symbol_tag_keys(
@@ -185,8 +214,8 @@ impl InspectorTab {
                     .collect::<Vec<_>>(),
                 );
 
-                self.symbol_tag_values = Some(
-                    Self::trimr(&Self::inspect_symbol_tag_values(
+                self.symbol_tag_reprs = Some(
+                    Self::trimr(&Self::inspect_symbol_tag_reprs(
                         env,
                         self.namespace.as_ref().unwrap(),
                         self.symbol.as_ref().unwrap(),
@@ -196,12 +225,6 @@ impl InspectorTab {
                     .map(|str| str.to_string())
                     .collect::<Vec<_>>(),
                 );
-
-                self.object_info = Some(Self::inspect_symbol(
-                    env,
-                    self.namespace.as_ref().unwrap(),
-                    self.symbol.as_ref().unwrap(),
-                ));
             }
             InspectorMessage::SelectSymbolTagKey(str) => {
                 let key_offset = self
@@ -212,20 +235,55 @@ impl InspectorTab {
                     .position(|list_str| *list_str == str)
                     .unwrap();
 
-                self.symbol_tag_value =
-                    Some(self.symbol_tag_values.as_ref().unwrap()[key_offset].clone());
+                let tag_repr = &self.symbol_tag_reprs.as_ref().unwrap()[key_offset].clone();
 
                 self.symbol_tag_key = Some(str.clone());
+                self.symbol_tag_repr = Some(tag_repr.to_string());
+
+                self.inspect_tag_key = Some(str.clone());
+                self.inspect_tag_repr = Some(tag_repr.to_string());
+
+                self.inspect_tag_keys = Some(
+                    Self::inspect_repr_tag_keys(env, tag_repr)
+                        .split(';')
+                        .map(|str| str.to_string())
+                        .collect::<Vec<_>>(),
+                );
+
+                self.inspect_tag_reprs = Some(
+                    Self::inspect_repr_tag_reprs(env, tag_repr)
+                        .split(';')
+                        .map(|str| str.to_string())
+                        .collect::<Vec<_>>(),
+                );
             }
-            InspectorMessage::SelectNamespace(str) => {
-                self.namespace = Some(str.clone());
-                self.namespace_symbols = Some(Self::fetch_symbols_list(env, str.to_string()));
-                self.symbol = None;
-                self.symbol_tag_keys = None;
-                self.symbol_tag_key = None;
-                self.symbol_tag_values = None;
-                self.symbol_tag_value = None;
-                self.object_info = None;
+            InspectorMessage::SelectInspectTagKey(str) => {
+                let key_offset = self
+                    .inspect_tag_keys
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .position(|list_str| *list_str == str)
+                    .unwrap();
+
+                let tag_repr = &self.inspect_tag_reprs.as_ref().unwrap()[key_offset].clone();
+
+                self.inspect_tag_key = Some(str.clone());
+                self.inspect_tag_repr = Some(tag_repr.to_string());
+
+                self.inspect_tag_keys = Some(
+                    Self::inspect_repr_tag_keys(env, tag_repr)
+                        .split(';')
+                        .map(|str| str.to_string())
+                        .collect::<Vec<_>>(),
+                );
+
+                self.inspect_tag_reprs = Some(
+                    Self::inspect_repr_tag_reprs(env, tag_repr)
+                        .split(';')
+                        .map(|str| str.to_string())
+                        .collect::<Vec<_>>(),
+                );
             }
             InspectorMessage::Refresh => match self.namespaces {
                 Some(_) => (),
@@ -233,13 +291,17 @@ impl InspectorTab {
             },
             InspectorMessage::Clear => {
                 self.namespace = None;
-                self.symbol = None;
                 self.namespace_symbols = None;
-                self.symbol_tag_keys = None;
+                self.inspect_tag_key = None;
+                self.inspect_tag_keys = None;
+                self.inspect_tag_repr = None;
+                self.inspect_tag_reprs = None;
+                self.symbol = None;
+                self.symbol_info = None;
                 self.symbol_tag_key = None;
-                self.symbol_tag_values = None;
-                self.symbol_tag_value = None;
-                self.object_info = None
+                self.symbol_tag_keys = None;
+                self.symbol_tag_repr = None;
+                self.symbol_tag_reprs = None;
             }
         }
     }
@@ -332,7 +394,7 @@ impl InspectorTab {
     }
 
     fn symbol(&self, _: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
-        match &self.object_info {
+        match &self.symbol_info {
             Some(descr) => {
                 let selection_list = SelectionList::new_with(
                     self.symbol_tag_keys.as_ref().unwrap(),
@@ -392,14 +454,11 @@ impl InspectorTab {
     }
 
     fn inspect(&self, env: &Environment, width: i32, height: i32) -> Element<InspectorMessage> {
-        let column = match &self.symbol_tag_value {
+        let column = match &self.inspect_tag_repr {
             Some(repr) => {
                 let selection_list = SelectionList::new_with(
-                    Self::inspect_repr_tag_keys(env, repr)
-                        .split(';')
-                        .map(|str| str.to_string())
-                        .collect::<Vec<_>>(),
-                    InspectorMessage::SelectSymbolTagKey,
+                    self.inspect_tag_keys.as_ref().unwrap(),
+                    InspectorMessage::SelectInspectTagKey,
                     18.0,
                     1.0,
                     SelectionListStyles::Default,
@@ -411,7 +470,6 @@ impl InspectorTab {
                     text("inspect:".to_string()).size(20),
                     horizontal_rule(1),
                     Space::new(width as u16, 5),
-                    //                    text(format!("; {}", repr)).size(16),
                     text(Self::inspect_repr(env, repr)).size(16),
                     selection_list,
                 )

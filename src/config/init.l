@@ -125,7 +125,7 @@
         (mu:get-str eth:inspect-stream))
         (core:%inspect (mu:repr :t repr)))))
 
-(mu:intern :eth "inspect-object-tag-values"
+(mu:intern :eth "inspect-repr-tag-values"
    (:lambda (repr)
      ((:lambda (inspect)
         (core:mapc
