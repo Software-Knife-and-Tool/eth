@@ -122,7 +122,7 @@ impl AboutTab {
             Space::new(width as u16, 5),
             text(format!("mu: version: {}", Mu::VERSION)).size(20),
             text(format!(
-                "core: heap size (pages) : {}",
+                "mu: heap size (pages) : {}",
                 env.core
                     .as_ref()
                     .unwrap()

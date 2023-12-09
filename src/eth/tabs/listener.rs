@@ -1,7 +1,7 @@
 //  SPDX-FileCopyrightText: Copyright 2023 James M. Putnam (putnamjm.design@gmail.com)
 //  SPDX-License-Identifier: MIT
 
-// core panel
+// listener panel
 //
 #![allow(clippy::new_without_default)]
 #![allow(clippy::collapsible_match)]
@@ -45,7 +45,7 @@ impl ListenerTab {
     pub fn new() -> Self {
         let tty = TtyBuilder::new().rows(19).cursor('_').build();
 
-        tty.write_string("core> ".to_string());
+        tty.write_string("eth> ".to_string());
 
         ListenerTab {
             command: String::new(),
