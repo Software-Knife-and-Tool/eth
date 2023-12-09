@@ -4,4 +4,4 @@
 mod tabs;
 mod widgets;
 
-pub mod ui;
+pub mod window;

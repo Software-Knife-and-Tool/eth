@@ -8,7 +8,7 @@
 use {
     super::super::{
         super::{Core, Environment},
-        ui::{Message, Tab},
+        window::{Message, Tab},
     },
     super::eth::CoreButton,
     iced::{

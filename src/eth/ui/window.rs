@@ -9,7 +9,7 @@
 
 use {
     super::super::{Core, Environment},
-    crate::eth::tabs::{
+    crate::ui::tabs::{
         about::{AboutMessage, AboutTab},
         inspector::{InspectorMessage, InspectorTab},
         listener::{ListenerMessage, ListenerTab},
