@@ -3,12 +3,12 @@
 #![allow(dead_code)]
 mod config;
 mod core;
-mod eth;
+mod ui;
 
 use {
     crate::{config::Config, core::Core},
-    eth::ui::Ui,
     iced::{window, Application, Settings},
+    ui::window::Ui,
 };
 
 #[derive(Default)]

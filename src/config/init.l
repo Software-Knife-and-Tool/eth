@@ -48,8 +48,6 @@
      "/opt/thorn/thorn/prelude/read-macro.l"
      "/opt/thorn/thorn/prelude/read.l"
      "/opt/thorn/thorn/prelude/repl.l"
-     "/opt/thorn/thorn/prelude/sequence.l"
-     "/opt/thorn/thorn/prelude/sort.l"
      "/opt/thorn/thorn/prelude/stream.l"
      "/opt/thorn/thorn/prelude/string.l"
      "/opt/thorn/thorn/prelude/symbol-macro.l"
