@@ -1,7 +1,7 @@
 [package]
 name = "eth"
 version = "0.0.2"
-authors = ["James M. Putnam <putnamjm.design@gmnail.com"]
+authors = ["James M. Putnam <putnamjm.design@gmail.com"]
 edition = "2021"
 publish = false
 
